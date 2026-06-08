@@ -1,0 +1,50 @@
+name: Liverpool Test Suite
+
+# Define qué eventos disparan la ejecución del pipeline
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest # Máquina virtual Linux limpia y optimizada
+
+    steps:
+    # 1. Copia el código de tu repositorio dentro de la máquina virtual de GitHub
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    # 2. Instala el entorno de Node.js y configura la caché para que el pipeline corra más rápido
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20 # Versión recomendada y estable
+        cache: 'npm'
+        
+    # 3. Instala las dependencias del proyecto (Playwright, TypeScript, etc.) de forma limpia
+    - name: Install dependencies
+      run: npm ci || npm install
+      
+    # 4. Instala los binarios de los navegadores (Chromium/Firefox) y sus librerías de sistema operativo
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+
+    # 5. Ejecuta las pruebas (Playwright leerá de forma automática el modo headless por defecto)
+    - name: Run Playwright tests
+      run: npx playwright test
+
+    # 6. Sube el reporte HTML generado como un artefacto (Se ejecuta SIEMPRE, incluso si la prueba falló)
+    - name: Upload HTML Report Artifact
+      if: always() # Obligatorio para recolectar evidencias si el test falla
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30 # El reporte se guardará en GitHub por 30 días
